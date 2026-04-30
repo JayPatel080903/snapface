@@ -44,6 +44,7 @@ export const authService = {
     },
 
     getUser(): User | null {
+        if (typeof window === "undefined") return null;
         const u = localStorage.getItem("user");
         return u ? JSON.parse(u) : null;
     },
