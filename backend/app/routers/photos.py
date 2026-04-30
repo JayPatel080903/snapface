@@ -36,29 +36,25 @@ class PhotoResponse(BaseModel):
 # ---------- Background task ----------
 
 def process_photo_ai(photo_id: str, image_bytes: bytes, db: Session):
-    """
-    Runs after upload response is sent.
-    Extracts face encodings + emotion + sharpness.
-    """
+    import json as json_lib
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
     if not photo:
         return
 
     try:
-        # Face encodings
         encodings = face_service.extract_encodings(image_bytes)
-        # Sharpness
         sharpness = face_service.compute_sharpness(image_bytes)
-        # Emotion
         emotion = emotion_service.detect_emotion(image_bytes)
 
         photo.face_encoding = encodings[0] if encodings else None
+        photo.all_face_encodings = json_lib.dumps(encodings) if encodings else None
         photo.face_count = len(encodings)
         photo.sharpness_score = sharpness
         photo.dominant_emotion = emotion["dominant_emotion"]
         photo.emotion_scores = emotion["emotion_scores"]
 
         db.commit()
+        print(f"Photo {photo_id}: {len(encodings)} faces encoded")
     except Exception as e:
         print(f"AI processing error for photo {photo_id}: {e}")
 
@@ -192,3 +188,35 @@ def delete_photo(
     cloudinary_service.delete_photo(photo.cloudinary_public_id)
     db.delete(photo)
     db.commit()
+
+@router.post("/reprocess/{event_id}")
+def reprocess_event_photos(
+    event_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Re-run AI on all photos — use when encodings are missing or outdated."""
+    import httpx, io
+
+    event = db.query(Event).filter(
+        Event.id == event_id,
+        Event.owner_id == current_user.id,
+    ).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    photos = db.query(Photo).filter(Photo.event_id == event_id).all()
+
+    for photo in photos:
+        # Download the image from Cloudinary
+        import urllib.request
+        image_bytes = urllib.request.urlopen(photo.url).read()
+        background_tasks.add_task(
+            process_photo_ai,
+            str(photo.id),
+            image_bytes,
+            db,
+        )
+
+    return {"message": f"Reprocessing {len(photos)} photos in background"}
