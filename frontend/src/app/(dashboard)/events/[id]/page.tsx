@@ -179,6 +179,12 @@ export default function EventDetailPage() {
                         >
                             {generatingReel ? "⏳ Generating reel..." : "🎬 Generate story reel"}
                         </button>
+                        <button
+                            onClick={() => router.push(`/events/${id}/reel`)}
+                            className="w-full border border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 text-sm py-2.5 rounded-lg transition font-medium"
+                        >
+                            🎬 Reel studio
+                        </button>
                     </div>
                 </div>
             </div>

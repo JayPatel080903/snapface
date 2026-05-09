@@ -170,6 +170,7 @@ export default function GuestPage() {
                 setProgress
             );
             setMatched(results);
+            sessionStorage.setItem(`matched_${token}`, JSON.stringify(results));
             setStep("results");
         } catch (err: any) {
             setMatchError(err.response?.data?.detail || "Something went wrong. Please try again.");
@@ -549,15 +550,15 @@ export default function GuestPage() {
                                             key={e}
                                             onClick={() => setResultEmotion(e)}
                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition ${resultEmotion === e
-                                                    ? "bg-blue-600 text-white border-blue-600"
-                                                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+                                                ? "bg-blue-600 text-white border-blue-600"
+                                                : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
                                                 }`}
                                         >
                                             <span>{emotionEmoji[e] || "🖼️"}</span>
                                             <span className="capitalize">{e}</span>
                                             <span className={`text-xs px-1.5 py-0.5 rounded-full ${resultEmotion === e
-                                                    ? "bg-white/20 text-white"
-                                                    : "bg-slate-100 text-slate-500"
+                                                ? "bg-white/20 text-white"
+                                                : "bg-slate-100 text-slate-500"
                                                 }`}>
                                                 {count}
                                             </span>
@@ -615,32 +616,18 @@ export default function GuestPage() {
                         </>
                     )}
 
-                    {/* Reel button */}
+                    {/* Reel button with settings */}
                     {filteredMatched.length >= 2 && (
                         <button
-                            onClick={async () => {
-                                try {
-                                    const { reelService } = await import("@/lib/reel");
-                                    const blob = await reelService.generateGuestReel(
-                                        token,
-                                        filteredMatched.map((m) => m.id)
-                                    );
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement("a");
-                                    a.href = url;
-                                    a.download = `my_snapface_reel_${resultEmotion}.mp4`;
-                                    a.click();
-                                    URL.revokeObjectURL(url);
-                                } catch {
-                                    alert("Reel generation failed. Please try again.");
-                                }
+                            onClick={() => {
+                                sessionStorage.setItem(`matched_${token}`, JSON.stringify(filteredMatched));
+                                window.location.href = `/guest/${token}/reel`;
                             }}
                             className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-xl text-sm transition"
                         >
-                            🎬 Generate reel from {resultEmotion === "all" ? "all" : resultEmotion} photos
+                            🎬 Create my story reel →
                         </button>
                     )}
-
                     {/* Try again */}
                     <button
                         onClick={() => {
