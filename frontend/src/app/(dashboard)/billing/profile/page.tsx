@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { invoiceService, StudioProfile } from "@/lib/invoice";
+import { useModal } from "@/lib/modal";
 
 export default function StudioProfilePage() {
     const router = useRouter();
@@ -10,7 +11,7 @@ export default function StudioProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
-
+    const { toast } = useModal();
     const [studioName, setStudioName] = useState("");
     const [studioAddress, setStudioAddress] = useState("");
     const [studioPhone, setStudioPhone] = useState("");
@@ -42,6 +43,8 @@ export default function StudioProfilePage() {
         setSaving(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
+        toast("Studio profile saved! ✓", "success");
+        router.push("/billing"); // Redirect back to billing page after saving
     }
 
     const inputClass = "w-full border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-slate-50 focus:bg-white";

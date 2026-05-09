@@ -7,6 +7,7 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { invoiceService, Invoice, Analytics } from "@/lib/invoice";
+import { useModal } from "@/lib/modal";
 
 const statusConfig = {
     pending: { label: "Pending", color: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -89,6 +90,7 @@ export default function BillingPage() {
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const { confirm, alert, toast } = useModal();
 
     useEffect(() => {
         Promise.all([invoiceService.list(), invoiceService.getAnalytics()]).then(
@@ -101,23 +103,37 @@ export default function BillingPage() {
     }, []);
 
     async function handleMarkPaid(id: string) {
-        if (!confirm("Mark this invoice as paid?")) return;
+        const ok = await confirm({
+            title: "Mark as paid?",
+            message: "This will mark the invoice as paid and send a confirmation email to the client.",
+            confirmLabel: "Mark paid",
+            variant: "info",
+        });
+        if (!ok) return;
         setActionLoading(id);
         const updated = await invoiceService.markPaid(id);
         setInvoices((prev) => prev.map((inv) => (inv.id === id ? updated : inv)));
         const ana = await invoiceService.getAnalytics();
         setAnalytics(ana);
         setActionLoading(null);
+        toast("Invoice marked as paid ✓", "success");
     }
 
     async function handleDelete(id: string) {
-        if (!confirm("Delete this invoice?")) return;
+        const ok = await confirm({
+            title: "Delete invoice?",
+            message: "This invoice will be permanently deleted. This cannot be undone.",
+            confirmLabel: "Delete",
+            variant: "danger",
+        });
+        if (!ok) return;
         setActionLoading(id);
         await invoiceService.delete(id);
         setInvoices((prev) => prev.filter((inv) => inv.id !== id));
         const ana = await invoiceService.getAnalytics();
         setAnalytics(ana);
         setActionLoading(null);
+        toast("Invoice deleted", "success");
     }
 
     async function handleDownloadPdf(id: string, number: string) {
@@ -130,9 +146,13 @@ export default function BillingPage() {
         setActionLoading(`email-${id}`);
         try {
             await invoiceService.sendEmail(id);
-            alert("Invoice emailed successfully!");
+            toast("Invoice emailed successfully! ✉️", "success");
         } catch {
-            alert("Failed to send email.");
+            await alert({
+                title: "Email failed",
+                message: "Failed to send email. Please check the client's email address and try again.",
+                variant: "error",
+            });
         }
         setActionLoading(null);
     }
@@ -243,7 +263,7 @@ export default function BillingPage() {
                                     tick={{ fontSize: 11, fill: "#94A3B8" }}
                                     axisLine={false}
                                     tickLine={false}
-                                    tickFormatter={(v) => v >= 1000 ? `₹${v / 1000}k` : `₹${v}`}
+                                    tickFormatter={(v: number) => v >= 1000 ? `₹${v / 1000}k` : `₹${v}`}
                                     width={48}
                                 />
                                 <Tooltip content={<BarTooltip />} cursor={{ fill: "#F8FAFC" }} />
@@ -337,7 +357,7 @@ export default function BillingPage() {
                                 tick={{ fontSize: 11, fill: "#94A3B8" }}
                                 axisLine={false}
                                 tickLine={false}
-                                tickFormatter={(v) => v >= 1000 ? `₹${v / 1000}k` : `₹${v}`}
+                                tickFormatter={(v: number) => v >= 1000 ? `₹${v / 1000}k` : `₹${v}`}
                             />
                             <YAxis
                                 type="category"
@@ -346,7 +366,7 @@ export default function BillingPage() {
                                 axisLine={false}
                                 tickLine={false}
                                 width={90}
-                                tickFormatter={(v) => v.length > 12 ? v.slice(0, 12) + "…" : v}
+                                tickFormatter={(v: string) => v.length > 12 ? v.slice(0, 12) + "…" : v}
                             />
                             <Tooltip content={<ClientTooltip />} cursor={{ fill: "#F8FAFC" }} />
                             <Bar dataKey="total" name="total billed" fill="#E2E8F0" radius={[0, 4, 4, 0]} />
@@ -543,6 +563,6 @@ export default function BillingPage() {
                     </>
                 )}
             </div>
-        </div >
+        </div>
     );
 }

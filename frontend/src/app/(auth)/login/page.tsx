@@ -59,7 +59,7 @@ export default function LoginPage() {
                                 key={f.title}
                                 className="flex items-center gap-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3"
                             >
-                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
+                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl shrink-0">
                                     {f.icon}
                                 </div>
                                 <div>

@@ -1,3 +1,4 @@
+import hashlib
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -8,7 +9,6 @@ from pydantic import BaseModel, EmailStr
 from app.database import get_db
 from app.models.user import User
 import os
-import hashlib
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -46,6 +46,7 @@ class TokenResponse(BaseModel):
 # ---------- Helpers ----------
 
 def hash_password(password: str) -> str:
+    # Convert to fixed length (bcrypt safe)
     password = hashlib.sha256(password.encode()).hexdigest()
     return pwd_context.hash(password)
 

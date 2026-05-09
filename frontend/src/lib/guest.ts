@@ -16,6 +16,12 @@ export interface GuestEvent {
     capsule_unlock_at: string | null;
     capsule_message: string | null;
     capsule_seconds_remaining: number;
+    // Countdown
+    has_countdown: boolean;
+    countdown_is_active: boolean;
+    photos_ready_at: string | null;
+    countdown_seconds_remaining: number;
+    countdown_message: string | null;
 }
 
 export interface MatchedPhoto {
@@ -25,6 +31,25 @@ export interface MatchedPhoto {
     dominant_emotion: string | null;
     face_count: number;
     distance: number;
+}
+
+export interface MatchResult {
+    matched: MatchedPhoto[];
+    gallery_token: string | null;
+    gallery_url: string | null;
+    total_matched: number;
+}
+
+export interface GalleryData {
+    gallery_token: string;
+    gallery_url: string;
+    event_name: string;
+    photographer_name: string;
+    guest_name: string | null;
+    photo_count: number;
+    view_count: number;
+    created_at: string;
+    photos: MatchedPhoto[];
 }
 
 export const guestService = {
@@ -43,12 +68,14 @@ export const guestService = {
     async matchSelfie(
         qrToken: string,
         selfie: File,
+        guestName?: string,
         password?: string,
         emotionFilter?: string,
         onProgress?: (pct: number) => void
-    ): Promise<MatchedPhoto[]> {
+    ): Promise<MatchResult> {
         const formData = new FormData();
         formData.append("selfie", selfie);
+        if (guestName) formData.append("guest_name", guestName);
         if (password) formData.append("password", password);
         if (emotionFilter && emotionFilter !== "all")
             formData.append("emotion_filter", emotionFilter);
@@ -58,6 +85,23 @@ export const guestService = {
                 if (onProgress && e.total)
                     onProgress(Math.round((e.loaded * 100) / e.total));
             },
+        });
+        return res.data;
+    },
+
+    async getGallery(galleryToken: string): Promise<GalleryData> {
+        const res = await guestApi.get(`/guest/gallery/${galleryToken}`);
+        return res.data;
+    },
+
+    async registerForNotification(
+        eventId: string,
+        email: string,
+        name?: string
+    ): Promise<{ message: string }> {
+        const res = await guestApi.post(`/events/${eventId}/countdown/register`, {
+            email,
+            name,
         });
         return res.data;
     },

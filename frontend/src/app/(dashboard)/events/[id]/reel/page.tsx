@@ -66,7 +66,6 @@ export default function ReelStudioPage() {
         ]).then(([ev, ph]) => {
             setEvent(ev);
             setPhotos(ph);
-            // Remove: setTitleText(ev.name);  ← delete this line
             setSelectedIds(new Set(ph.map((p) => p.id)));
             setLoading(false);
         });

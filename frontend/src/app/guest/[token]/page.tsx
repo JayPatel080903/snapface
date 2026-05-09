@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { guestService, GuestEvent, MatchedPhoto } from "@/lib/guest";
+import ReactionBar from "@/components/ReactionBar";
 
 const emotionEmoji: Record<string, string> = {
     all: "🖼️", happy: "😊", sad: "😢", angry: "😠",
     surprised: "😲", neutral: "😐", fear: "😨", disgust: "🤢",
 };
 
-type Step = "landing" | "password" | "capsule" | "selfie" | "matching" | "results";
+type Step = "landing" | "password" | "capsule" | "countdown" | "selfie" | "matching" | "results";
 
 // ── Countdown component ──
 function Countdown({ seconds: initialSeconds, onUnlock }: { seconds: number; onUnlock: () => void }) {
@@ -111,13 +112,175 @@ function PasswordStep({
     );
 }
 
+function CountdownStep({
+    event,
+    onUnlock,
+    token,
+}: {
+    event: GuestEvent;
+    onUnlock: () => void;
+    token: string;
+}) {
+    const [remaining, setRemaining] = useState(event.countdown_seconds_remaining);
+    const [email, setEmail] = useState("");
+    const [name, setName] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [done, setDone] = useState(false);
+
+    useEffect(() => {
+        if (remaining <= 0) { onUnlock(); return; }
+        const timer = setInterval(() => {
+            setRemaining((s) => {
+                if (s <= 1) { onUnlock(); return 0; }
+                return s - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const days = Math.floor(remaining / 86400);
+    const hours = Math.floor((remaining % 86400) / 3600);
+    const mins = Math.floor((remaining % 3600) / 60);
+    const secs = remaining % 60;
+
+    async function handleRegister(e: React.FormEvent) {
+        e.preventDefault();
+        if (!email) return;
+        setLoading(true);
+        try {
+            await guestService.registerForNotification(event.id, email, name);
+            setDone(true);
+        } catch {
+            setDone(true); // still show success to avoid leaking info
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <div className="space-y-5">
+            {/* Main countdown card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm text-center">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-5">
+                    📸
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Photos coming soon!</h2>
+                <p className="text-slate-500 text-sm mb-1">
+                    {event.photographer_name} is still processing your photos.
+                </p>
+                <p className="text-slate-500 text-sm mb-6">
+                    They'll be ready in:
+                </p>
+
+                {/* Countdown */}
+                <div className="grid grid-cols-4 gap-2 mb-6">
+                    {[
+                        { val: days, label: "Days" },
+                        { val: hours, label: "Hours" },
+                        { val: mins, label: "Mins" },
+                        { val: secs, label: "Secs" },
+                    ].map((u) => (
+                        <div key={u.label} className="bg-blue-600 rounded-2xl p-3 text-white text-center">
+                            <div className="text-2xl font-bold tabular-nums">
+                                {String(u.val).padStart(2, "0")}
+                            </div>
+                            <div className="text-xs text-blue-200 mt-0.5">{u.label}</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Ready date */}
+                {event.photos_ready_at && (
+                    <p className="text-xs text-slate-400 mb-4">
+                        Expected ready by:{" "}
+                        <span className="font-medium text-slate-600">
+                            {new Date(event.photos_ready_at).toLocaleString("en-IN", {
+                                day: "numeric", month: "long", year: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                            })}
+                        </span>
+                    </p>
+                )}
+
+                {/* Photographer message */}
+                {event.countdown_message && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left">
+                        <p className="text-xs text-slate-400 font-semibold mb-1 uppercase tracking-wide">
+                            Message from {event.photographer_name}
+                        </p>
+                        <p className="text-sm text-slate-700 italic leading-relaxed">
+                            "{event.countdown_message}"
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {/* Email registration card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                {done ? (
+                    <div className="text-center py-4">
+                        <div className="text-4xl mb-3">✅</div>
+                        <p className="font-semibold text-slate-900 mb-1">You're registered!</p>
+                        <p className="text-sm text-slate-500">
+                            We'll email you at <span className="font-medium text-blue-600">{email}</span> when photos are ready.
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        <h3 className="font-semibold text-slate-900 mb-1">Get notified when ready</h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                            Enter your email and we'll notify you the moment your photos are available.
+                        </p>
+                        <form onSubmit={handleRegister} className="space-y-3">
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Your name (optional)"
+                                className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                            />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                placeholder="your@email.com"
+                                className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                            />
+                            <button
+                                type="submit"
+                                disabled={loading || !email}
+                                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-3 rounded-xl text-sm transition"
+                            >
+                                {loading ? "Registering..." : "🔔 Notify me when ready"}
+                            </button>
+                        </form>
+                    </>
+                )}
+            </div>
+
+            {/* Event info */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                <p className="text-xs text-slate-400">
+                    📷 {event.total_photos} photos uploaded so far ·{" "}
+                    More being processed by {event.photographer_name}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export default function GuestPage() {
     const { token } = useParams<{ token: string }>();
-
+    const [resultEmotion, setResultEmotion] = useState("all");
     const [event, setEvent] = useState<GuestEvent | null>(null);
     const [loadingEvent, setLoadingEvent] = useState(true);
     const [eventError, setEventError] = useState("");
     const [step, setStep] = useState<Step>("landing");
+    const [guestName, setGuestName] = useState("");
+    const [galleryUrl, setGalleryUrl] = useState<string | null>(null);
+    const [galleryToken, setGalleryToken] = useState<string | null>(null);
+    const [copiedGallery, setCopiedGallery] = useState(false);
 
     // Password
     const [password, setPassword] = useState("");
@@ -134,16 +297,21 @@ export default function GuestPage() {
     // Results
     const [matched, setMatched] = useState<MatchedPhoto[]>([]);
     const [lightbox, setLightbox] = useState<MatchedPhoto | null>(null);
-    const [resultEmotion, setResultEmotion] = useState("all");
+    const [regEmail, setRegEmail] = useState("");
+    const [regName, setRegName] = useState("");
+    const [regLoading, setRegLoading] = useState(false);
+    const [regDone, setRegDone] = useState(false);
 
     useEffect(() => {
-        guestService
-            .getEvent(token)
+        guestService.getEvent(token)
             .then((data) => {
                 setEvent(data);
                 setLoadingEvent(false);
-                // Determine initial step
-                if (data.has_capsule && data.capsule_is_locked) {
+
+                // Priority: countdown > capsule > password > selfie
+                if (data.has_countdown && data.countdown_is_active) {
+                    setStep("countdown");
+                } else if (data.has_capsule && data.capsule_is_locked) {
                     setStep("capsule");
                 } else if (data.is_password_protected) {
                     setStep("password");
@@ -163,17 +331,21 @@ export default function GuestPage() {
         setProgress(0);
         setMatchError("");
         try {
-            const results = await guestService.matchSelfie(
-                token, selfie,
+            const result = await guestService.matchSelfie(
+                token,
+                selfie,
+                guestName || undefined,
                 event?.is_password_protected ? password : undefined,
                 emotionFilter !== "all" ? emotionFilter : undefined,
                 setProgress
             );
-            setMatched(results);
-            sessionStorage.setItem(`matched_${token}`, JSON.stringify(results));
+            setMatched(result.matched);
+            setGalleryUrl(result.gallery_url);
+            setGalleryToken(result.gallery_token);
+            sessionStorage.setItem(`matched_${token}`, JSON.stringify(result.matched));
             setStep("results");
         } catch (err: any) {
-            setMatchError(err.response?.data?.detail || "Something went wrong. Please try again.");
+            setMatchError(err.response?.data?.detail || "Something went wrong.");
             setStep("selfie");
         }
     }
@@ -189,7 +361,7 @@ export default function GuestPage() {
 
     // ── Shared wrapper ──
     const Wrapper = ({ children }: { children: React.ReactNode }) => (
-        <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+        <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
             <div className="bg-white border-b border-slate-200 px-6 py-4 text-center">
                 <span className="text-xl font-bold text-blue-600">SnapFace</span>
             </div>
@@ -285,6 +457,22 @@ export default function GuestPage() {
         );
     }
 
+    // ── Step: Countdown ──
+    if (step === "countdown" && event) {
+        return (
+            <Wrapper>
+                <CountdownStep
+                    event={event}
+                    onUnlock={() => {
+                        if (event.is_password_protected) setStep("password");
+                        else setStep("selfie");
+                    }}
+                    token={token}
+                />
+            </Wrapper>
+        );
+    }
+
     // ── Step: Password ──
     if (step === "password") {
         return (
@@ -355,6 +543,21 @@ export default function GuestPage() {
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Guest name — optional */}
+                    <div>
+                        <label className="text-sm font-medium text-slate-700 mb-1.5 block">
+                            Your name <span className="text-xs text-slate-400 font-normal">(optional — for your gallery link)</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                            placeholder="e.g. Raj Sharma"
+                            className="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                            autoFocus
+                        />
                     </div>
 
                     {/* Emotion filter */}
@@ -569,6 +772,46 @@ export default function GuestPage() {
                         </div>
                     )}
 
+                    {/* Gallery share card */}
+                    {galleryUrl && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                            <div className="flex items-start gap-3">
+                                <div className="text-2xl flex-shrink-0">🔗</div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold text-blue-900 mb-0.5">
+                                        Your personal gallery is ready!
+                                    </p>
+                                    <p className="text-xs text-blue-600 mb-3">
+                                        Share this link — anyone can view your photos without uploading a selfie.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(galleryUrl);
+                                                setCopiedGallery(true);
+                                                setTimeout(() => setCopiedGallery(false), 2000);
+                                            }}
+                                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 rounded-xl transition"
+                                        >
+                                            {copiedGallery ? "✓ Copied!" : "📋 Copy gallery link"}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                const msg = encodeURIComponent(
+                                                    `Hey! Here are my photos from ${event?.name} 📸\n\nView my gallery: ${galleryUrl}`
+                                                );
+                                                window.open(`https://wa.me/?text=${msg}`, "_blank");
+                                            }}
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-2.5 rounded-xl transition"
+                                        >
+                                            📱 Share on WhatsApp
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Photo grid */}
                     {matched.length > 0 && (
                         <>
@@ -628,6 +871,7 @@ export default function GuestPage() {
                             🎬 Create my story reel →
                         </button>
                     )}
+
                     {/* Try again */}
                     <button
                         onClick={() => {
@@ -658,18 +902,20 @@ export default function GuestPage() {
                                 alt=""
                                 className="w-full max-h-[65vh] object-contain bg-slate-50"
                             />
-                            <div className="p-4 space-y-2">
+                            <div className="p-4 space-y-3">
+                                <div>
+                                    <p className="text-xs text-slate-400 mb-2 font-medium">React to this photo</p>
+                                    <ReactionBar photoId={lightbox.id} galleryToken={galleryToken || undefined} />
+                                </div>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => {
-                                            const ext = lightbox.url.split(".").pop()?.split("?")[0] || "jpg";
-                                            const emotion = lightbox.dominant_emotion ? `_${lightbox.dominant_emotion}` : "";
-                                            downloadSingle(lightbox.url, `snapface${emotion}.${ext}`);
-                                        }}
+                                    <a
+                                        href={lightbox.url}
+                                        download
+                                        target="_blank"
                                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 rounded-xl text-center transition"
                                     >
-                                        📥 Download photo
-                                    </button>
+                                        Download photo
+                                    </a>
                                     <button
                                         onClick={() => setLightbox(null)}
                                         className="px-5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:border-slate-300 transition"
@@ -677,11 +923,6 @@ export default function GuestPage() {
                                         Close
                                     </button>
                                 </div>
-                                {lightbox.dominant_emotion && (
-                                    <p className="text-center text-xs text-slate-400">
-                                        {emotionEmoji[lightbox.dominant_emotion]} {lightbox.dominant_emotion} photo
-                                    </p>
-                                )}
                             </div>
                         </div>
                     </div>

@@ -66,7 +66,7 @@ export default function RegisterPage() {
                             { num: "04", title: "AI does the rest", desc: "Face match in under 2 seconds" },
                         ].map((s) => (
                             <div key={s.num} className="flex items-center gap-4">
-                                <div className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white text-xs font-bold shrink-0">
                                     {s.num}
                                 </div>
                                 <div>
@@ -126,7 +126,7 @@ export default function RegisterPage() {
                                 onChange={(e) => setName(e.target.value)}
                                 required
                                 className={inputClass}
-                                placeholder="Havan Butani"
+                                placeholder="Enter your full name"
                             />
                         </div>
 
@@ -169,12 +169,12 @@ export default function RegisterPage() {
                                         <div
                                             key={i}
                                             className={`h-1 flex-1 rounded-full transition-all ${password.length >= i * 3
-                                                    ? password.length >= 10
-                                                        ? "bg-green-500"
-                                                        : password.length >= 6
-                                                            ? "bg-blue-500"
-                                                            : "bg-amber-400"
-                                                    : "bg-slate-100"
+                                                ? password.length >= 10
+                                                    ? "bg-green-500"
+                                                    : password.length >= 6
+                                                        ? "bg-blue-500"
+                                                        : "bg-amber-400"
+                                                : "bg-slate-100"
                                                 }`}
                                         />
                                     ))}

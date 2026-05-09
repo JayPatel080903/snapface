@@ -68,6 +68,7 @@ export interface Analytics {
         count: number;
     }[];
 }
+
 export interface StudioProfile {
     name: string;
     email: string;

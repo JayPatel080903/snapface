@@ -15,19 +15,20 @@ class Photo(Base):
     url = Column(Text, nullable=False)
     thumbnail_url = Column(Text, nullable=True)
 
-    # First face encoding (kept for backwards compat)
     face_encoding = Column(ARRAY(Float), nullable=True)
-
-    # ALL face encodings stored as JSON text — list of 512-dim lists
     all_face_encodings = Column(Text, nullable=True)
-
     face_count = Column(Integer, default=0)
 
     dominant_emotion = Column(String(50), nullable=True)
     emotion_scores = Column(Text, nullable=True)
+    face_emotions = Column(Text, nullable=True)
+
+    # Scene detection
+    scene_category = Column(String(50), nullable=True)
+    scene_confidence = Column(Float, nullable=True)
+
     sharpness_score = Column(Float, nullable=True)
     is_watermarked = Column(Boolean, default=False)
-
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 
     event = relationship("Event", back_populates="photos")

@@ -44,7 +44,7 @@ export default function LandingPage() {
       {/* ── Hero ── */}
       <section className="pt-32 pb-20 px-6 relative overflow-hidden">
         {/* background blobs */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-175 h-175 bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none" />
         <div className="absolute top-40 right-0 w-80 h-80 bg-indigo-100 rounded-full blur-3xl opacity-40 pointer-events-none" />
         <div className="absolute top-60 left-0 w-64 h-64 bg-sky-100 rounded-full blur-3xl opacity-40 pointer-events-none" />
 
@@ -238,7 +238,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Unique features ── */}
-      <section id="unique" className="py-24 px-6 bg-gradient-to-b from-blue-50 to-white border-t border-blue-100">
+      <section id="unique" className="py-24 px-6 bg-linear-to-b from-blue-50 to-white border-t border-blue-100">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-blue-600 font-semibold text-sm uppercase tracking-widest mb-3">Only on SnapFace</p>

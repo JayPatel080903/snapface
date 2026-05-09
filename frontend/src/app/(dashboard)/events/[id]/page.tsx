@@ -14,16 +14,6 @@ export default function EventDetailPage() {
     const [copied, setCopied] = useState(false);
     const [generatingReel, setGeneratingReel] = useState(false);
 
-    useEffect(() => {
-        Promise.all([eventService.get(id), eventService.getQR(id)]).then(
-            ([eventData, qrData]) => {
-                setEvent(eventData);
-                setQr(qrData);
-                setLoading(false);
-            }
-        );
-    }, [id]);
-
     async function handleGenerateReel() {
         setGeneratingReel(true);
         try {
@@ -49,6 +39,16 @@ export default function EventDetailPage() {
             setGeneratingReel(false);
         }
     }
+
+    useEffect(() => {
+        Promise.all([eventService.get(id), eventService.getQR(id)]).then(
+            ([eventData, qrData]) => {
+                setEvent(eventData);
+                setQr(qrData);
+                setLoading(false);
+            }
+        );
+    }, [id]);
 
     function handleCopy() {
         if (!qr) return;
@@ -173,17 +173,40 @@ export default function EventDetailPage() {
                             ⏳ Time capsule
                         </button>
                         <button
-                            onClick={handleGenerateReel}
-                            disabled={generatingReel}
-                            className="w-full border border-slate-200 hover:border-green-300 text-slate-600 hover:text-green-600 text-sm py-2.5 rounded-lg transition font-medium disabled:opacity-50"
-                        >
-                            {generatingReel ? "⏳ Generating reel..." : "🎬 Generate story reel"}
-                        </button>
-                        <button
                             onClick={() => router.push(`/events/${id}/reel`)}
                             className="w-full border border-slate-200 hover:border-violet-300 text-slate-600 hover:text-violet-600 text-sm py-2.5 rounded-lg transition font-medium"
                         >
                             🎬 Reel studio
+                        </button>
+                        <button
+                            onClick={() => router.push(`/events/${id}/analytics`)}
+                            className="w-full border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 text-sm py-2.5 rounded-lg transition font-medium"
+                        >
+                            📊 View analytics
+                        </button>
+                        <button
+                            onClick={() => router.push(`/events/${id}/smart-album`)}
+                            className="w-full border border-slate-200 hover:border-emerald-300 text-slate-600 hover:text-emerald-600 text-sm py-2.5 rounded-lg transition font-medium"
+                        >
+                            🤖 Smart album
+                        </button>
+                        <button
+                            onClick={() => router.push(`/events/${id}/duplicates`)}
+                            className="w-full border border-slate-200 hover:border-red-300 text-slate-600 hover:text-red-600 text-sm py-2.5 rounded-lg transition font-medium"
+                        >
+                            🔍 Duplicate detector
+                        </button>
+                        <button
+                            onClick={() => router.push(`/events/${id}/countdown`)}
+                            className="w-full border border-slate-200 hover:border-blue-300 text-slate-600 hover:text-blue-600 text-sm py-2.5 rounded-lg transition font-medium"
+                        >
+                            ⏰ Event countdown
+                        </button>
+                        <button
+                            onClick={() => router.push(`/events/${id}/attendance`)}
+                            className="w-full border border-slate-200 hover:border-green-300 text-slate-600 hover:text-green-600 text-sm py-2.5 rounded-lg transition font-medium"
+                        >
+                            👥 Attendance tracker
                         </button>
                     </div>
                 </div>
