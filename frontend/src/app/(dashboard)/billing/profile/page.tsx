@@ -98,7 +98,7 @@ export default function StudioProfilePage() {
                                 value={studioName}
                                 onChange={(e) => setStudioName(e.target.value)}
                                 className={inputClass}
-                                placeholder="e.g. Havan Photography Studio"
+                                placeholder="e.g. Jay Photography Studio"
                             />
                         </div>
 
