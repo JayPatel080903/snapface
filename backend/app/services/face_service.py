@@ -12,10 +12,10 @@ def get_face_app():
     global _app
     if _app is None:
         _app = FaceAnalysis(
-            name="buffalo_l",
+            name="buffalo_sc",
             providers=["CPUExecutionProvider"],
         )
-        _app.prepare(ctx_id=-1, det_size=(640, 640))
+        _app.prepare(ctx_id=-1, det_size=(320, 320))
     return _app
 
 
