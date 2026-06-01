@@ -23,8 +23,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python -c "from insightface.app import FaceAnalysis; app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); app.prepare(ctx_id=-1, det_size=(640,640))"
+# ✅ buffalo_sc (150MB RAM vs 400MB) + det_size 320 (half memory vs 640)
+RUN python -c "from insightface.app import FaceAnalysis; app = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider']); app.prepare(ctx_id=-1, det_size=(320,320))"
 
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# ✅ gunicorn with uvicorn worker — recycles after 100 requests to prevent memory leaks
+CMD ["gunicorn", "main:app", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--workers", "1", \
+     "--max-requests", "100", \
+     "--max-requests-jitter", "20", \
+     "--bind", "0.0.0.0:8000", \
+     "--timeout", "300", \
+     "--keep-alive", "5"]
