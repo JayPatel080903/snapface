@@ -41,30 +41,49 @@ class PhotoResponse(BaseModel):
 
 
 # ---------- Background task ----------
+def resize_for_ai(image_bytes: bytes, max_size: int = 1280) -> bytes:
+    """Resize image to max 1280px on longest side before AI processing.
+    Saves memory during InsightFace and DeepFace inference."""
+    try:
+        pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        w, h = pil.size
+        if max(w, h) > max_size:
+            ratio = max_size / max(w, h)
+            new_w = int(w * ratio)
+            new_h = int(h * ratio)
+            pil = pil.resize((new_w, new_h), Image.LANCZOS)
+            buf = io.BytesIO()
+            pil.save(buf, format="JPEG", quality=92)
+            buf.seek(0)
+            return buf.read()
+        return image_bytes
+    except Exception:
+        return image_bytes
+
 
 def process_photo_ai(photo_id: str, image_bytes: bytes, db: Session):
     import json as json_lib
+    import gc
+
     photo = db.query(Photo).filter(Photo.id == photo_id).first()
     if not photo:
         return
 
+    ai_bytes = image_bytes  # will be replaced by resized version
+
     try:
-        # ✅ Resize for AI processing — reduces memory during inference
         ai_bytes = resize_for_ai(image_bytes, max_size=1280)
 
-        # Use ai_bytes for all AI processing (not original image_bytes)
         encodings = face_service.extract_encodings(ai_bytes)
         sharpness = face_service.compute_sharpness(ai_bytes)
         emotion = emotion_service.detect_emotion(ai_bytes)
 
         per_face_emotions = []
         if encodings:
+            print(f"Photo {photo_id}: detecting per-face emotions for {len(encodings)} faces")
             per_face_emotions = emotion_service.detect_per_face_emotions(ai_bytes, encodings)
 
         scene = scene_service.detect_scene(ai_bytes, face_count=len(encodings))
-
-        # Original full-res image_bytes already uploaded to Cloudinary
-        # Only AI uses the resized version
 
         photo.face_encoding = encodings[0] if encodings else None
         photo.all_face_encodings = json_lib.dumps(encodings) if encodings else None
@@ -77,6 +96,7 @@ def process_photo_ai(photo_id: str, image_bytes: bytes, db: Session):
         photo.scene_confidence = scene["scene_confidence"]
 
         db.commit()
+        print(f"Photo {photo_id}: {len(encodings)} faces | emotion={emotion['dominant_emotion']} | scene={scene['scene_category']}")
 
     except Exception as e:
         print(f"AI processing error for photo {photo_id}: {e}")
@@ -87,14 +107,8 @@ def process_photo_ai(photo_id: str, image_bytes: bytes, db: Session):
             tf.keras.backend.clear_session()
         except Exception:
             pass
-        import gc
         gc.collect()
-        # ✅ Explicitly delete large bytes objects
-        del ai_bytes
-        gc.collect()
-    except Exception as e:
-        print(f"AI processing error for photo {photo_id}: {e}")
-# ---------- Routes ----------
+        # ---------- Routes ----------
 
 @router.post("/reprocess/{event_id}")
 def reprocess_event_photos(
@@ -348,22 +362,3 @@ def download_all_photos(
             "Content-Disposition": f'attachment; filename="{safe_name}_photos.zip"'
         }
     )
-
-def resize_for_ai(image_bytes: bytes, max_size: int = 1280) -> bytes:
-    """Resize image to max 1280px on longest side before AI processing.
-    Saves memory during InsightFace and DeepFace inference."""
-    try:
-        pil = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        w, h = pil.size
-        if max(w, h) > max_size:
-            ratio = max_size / max(w, h)
-            new_w = int(w * ratio)
-            new_h = int(h * ratio)
-            pil = pil.resize((new_w, new_h), Image.LANCZOS)
-            buf = io.BytesIO()
-            pil.save(buf, format="JPEG", quality=92)
-            buf.seek(0)
-            return buf.read()
-        return image_bytes
-    except Exception:
-        return image_bytes
